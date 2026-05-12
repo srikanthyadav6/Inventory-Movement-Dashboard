@@ -26,6 +26,9 @@ export interface MovementPageResponse {
   size: number;
   totalElements: number;
   totalPages: number;
+}
+
+export interface MovementAnalyticsResponse {
   summary: MovementSummary;
   dailyTotals: DailyMovementTotal[];
 }

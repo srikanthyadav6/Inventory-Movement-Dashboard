@@ -1,4 +1,4 @@
-import type { MovementFilters, MovementPageResponse } from './types';
+import type { MovementAnalyticsResponse, MovementFilters, MovementPageResponse } from './types';
 
 const PAGE_SIZE = 10;
 
@@ -30,6 +30,18 @@ export async function fetchMovements(filters: MovementFilters, page: number, sig
   }
 
   return response.json() as Promise<MovementPageResponse>;
+}
+
+export async function fetchMovementAnalytics(filters: MovementFilters, signal?: AbortSignal) {
+  const params = buildMovementParams(filters);
+  const response = await fetch(`/api/movements/analytics?${params.toString()}`, { signal });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || 'Unable to load movement analytics.');
+  }
+
+  return response.json() as Promise<MovementAnalyticsResponse>;
 }
 
 export async function exportMovementsCsv(filters: MovementFilters) {

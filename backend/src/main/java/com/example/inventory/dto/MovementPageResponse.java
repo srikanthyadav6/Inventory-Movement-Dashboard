@@ -7,8 +7,6 @@ public record MovementPageResponse(
         int page,
         int size,
         long totalElements,
-        int totalPages,
-        MovementSummaryDto summary,
-        List<DailyMovementTotalDto> dailyTotals
+        int totalPages
 ) {
 }

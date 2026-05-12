@@ -12,8 +12,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { exportMovementsCsv, fetchMovements } from './api';
-import type { MovementFilterType, MovementFilters, MovementPageResponse, StockMovement } from './types';
+import { exportMovementsCsv, fetchMovementAnalytics, fetchMovements } from './api';
+import type {
+  MovementAnalyticsResponse,
+  MovementFilterType,
+  MovementFilters,
+  MovementPageResponse,
+  StockMovement,
+} from './types';
 import './App.css';
 
 const DEFAULT_FILTERS: MovementFilters = {
@@ -22,12 +28,15 @@ const DEFAULT_FILTERS: MovementFilters = {
   type: 'ALL',
 };
 
-const EMPTY_RESPONSE: MovementPageResponse = {
+const EMPTY_PAGE_RESPONSE: MovementPageResponse = {
   content: [],
   page: 0,
   size: 10,
   totalElements: 0,
   totalPages: 0,
+};
+
+const EMPTY_ANALYTICS_RESPONSE: MovementAnalyticsResponse = {
   summary: { inQuantity: 0, outQuantity: 0 },
   dailyTotals: [],
 };
@@ -42,8 +51,10 @@ function App() {
   const [filters, setFilters] = useState<MovementFilters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<MovementFilters>(DEFAULT_FILTERS);
   const [page, setPage] = useState(0);
-  const [data, setData] = useState<MovementPageResponse>(EMPTY_RESPONSE);
+  const [pageData, setPageData] = useState<MovementPageResponse>(EMPTY_PAGE_RESPONSE);
+  const [analytics, setAnalytics] = useState<MovementAnalyticsResponse>(EMPTY_ANALYTICS_RESPONSE);
   const [loading, setLoading] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,10 +64,10 @@ function App() {
     setError('');
 
     fetchMovements(appliedFilters, page, controller.signal)
-      .then(setData)
+      .then(setPageData)
       .catch((err: Error) => {
         if (err.name !== 'AbortError') {
-          setData(EMPTY_RESPONSE);
+          setPageData(EMPTY_PAGE_RESPONSE);
           setError(err.message);
         }
       })
@@ -69,17 +80,39 @@ function App() {
     return () => controller.abort();
   }, [appliedFilters, page]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setAnalyticsLoading(true);
+    setError('');
+
+    fetchMovementAnalytics(appliedFilters, controller.signal)
+      .then(setAnalytics)
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') {
+          setAnalytics(EMPTY_ANALYTICS_RESPONSE);
+          setError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setAnalyticsLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [appliedFilters]);
+
   const pieData = useMemo(
     () => [
-      { name: 'IN', value: data.summary.inQuantity },
-      { name: 'OUT', value: data.summary.outQuantity },
+      { name: 'IN', value: analytics.summary.inQuantity },
+      { name: 'OUT', value: analytics.summary.outQuantity },
     ].filter((item) => item.value > 0),
-    [data.summary],
+    [analytics.summary],
   );
 
-  const totalQuantity = data.summary.inQuantity + data.summary.outQuantity;
+  const totalQuantity = analytics.summary.inQuantity + analytics.summary.outQuantity;
   const canGoBack = page > 0;
-  const canGoForward = page + 1 < data.totalPages;
+  const canGoForward = page + 1 < pageData.totalPages;
 
   function updateFilter<K extends keyof MovementFilters>(key: K, value: MovementFilters[K]) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -160,7 +193,9 @@ function App() {
           <div className="panel-heading">
             <h2>IN vs OUT Quantity</h2>
           </div>
-          {totalQuantity === 0 ? (
+          {analyticsLoading ? (
+            <EmptyState message="Loading chart totals..." />
+          ) : totalQuantity === 0 ? (
             <EmptyState message="No quantity totals for the selected filters." />
           ) : (
             <div className="chart-frame">
@@ -183,12 +218,14 @@ function App() {
           <div className="panel-heading">
             <h2>Daily Movement Trend</h2>
           </div>
-          {data.dailyTotals.length === 0 ? (
+          {analyticsLoading ? (
+            <EmptyState message="Loading daily totals..." />
+          ) : analytics.dailyTotals.length === 0 ? (
             <EmptyState message="No daily totals for the selected filters." />
           ) : (
             <div className="chart-frame">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.dailyTotals} margin={{ top: 8, right: 18, left: 8, bottom: 8 }}>
+                <AreaChart data={analytics.dailyTotals} margin={{ top: 8, right: 18, left: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" minTickGap={28} />
                   <YAxis />
@@ -223,18 +260,18 @@ function App() {
         <div className="panel-heading table-heading">
           <div>
             <h2>Stock Movements</h2>
-            <p>{loading ? 'Loading movements...' : `Total ${formatNumber(data.totalElements)}`}</p>
+            <p>{loading ? 'Loading movements...' : `Total ${formatNumber(pageData.totalElements)}`}</p>
           </div>
           <Pagination
             page={page}
-            totalPages={data.totalPages}
+            totalPages={pageData.totalPages}
             canGoBack={canGoBack}
             canGoForward={canGoForward}
             onPrevious={() => setPage((current) => Math.max(0, current - 1))}
             onNext={() => setPage((current) => current + 1)}
           />
         </div>
-        <MovementTable rows={data.content} loading={loading} />
+        <MovementTable rows={pageData.content} loading={loading} />
       </section>
     </main>
   );
