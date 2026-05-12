@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
+
+# Backend build output
+backend/target/
+backend/.idea/
+
+# Logs and local runtime output
+*.log
+
+# Tooling output
+.playwright-mcp/
