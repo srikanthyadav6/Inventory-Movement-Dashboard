@@ -109,9 +109,6 @@ function App() {
           <p className="eyebrow">Warehouse operations</p>
           <h1>Inventory Movement Dashboard</h1>
         </div>
-        <button className="export-button" type="button" onClick={handleExport} disabled={exporting || loading}>
-          {exporting ? 'Exporting...' : 'Export CSV'}
-        </button>
       </section>
 
       <section className="filters-panel" aria-label="Movement filters">
@@ -151,15 +148,12 @@ function App() {
         <button className="apply-button" type="button" onClick={applyFilters}>
           Apply filters
         </button>
+        <button className="export-button" type="button" onClick={handleExport} disabled={exporting || loading}>
+          {exporting ? 'Exporting...' : 'Export CSV'}
+        </button>
       </section>
 
       {error && <div className="alert">{error}</div>}
-
-      <section className="metrics-row" aria-label="Movement summary">
-        <Metric label="Total IN" value={data.summary.inQuantity} />
-        <Metric label="Total OUT" value={data.summary.outQuantity} />
-        <Metric label="Filtered records" value={data.totalElements} />
-      </section>
 
       <section className="charts-grid">
         <div className="panel">
@@ -229,7 +223,7 @@ function App() {
         <div className="panel-heading table-heading">
           <div>
             <h2>Stock Movements</h2>
-            <p>{loading ? 'Loading movements...' : `${formatNumber(data.totalElements)} filtered records`}</p>
+            <p>{loading ? 'Loading movements...' : `Total ${formatNumber(data.totalElements)}`}</p>
           </div>
           <Pagination
             page={page}
@@ -243,15 +237,6 @@ function App() {
         <MovementTable rows={data.content} loading={loading} />
       </section>
     </main>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{formatNumber(value)}</strong>
-    </div>
   );
 }
 

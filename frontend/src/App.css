@@ -5,10 +5,6 @@
 }
 
 .page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
   margin-bottom: 24px;
 }
 
@@ -66,7 +62,7 @@ button:disabled {
 
 .filters-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) minmax(160px, 0.7fr) minmax(140px, 0.6fr);
   gap: 16px;
   align-items: end;
   padding: 18px;
@@ -105,39 +101,11 @@ select {
   font-weight: 700;
 }
 
-.metrics-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin: 18px 0;
-}
-
-.metric {
-  padding: 18px;
-  border: 1px solid #d8e0e6;
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.metric span {
-  display: block;
-  color: #567083;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.metric strong {
-  display: block;
-  margin-top: 8px;
-  color: #13212b;
-  font-size: 1.7rem;
-}
-
 .charts-grid {
   display: grid;
   grid-template-columns: minmax(280px, 0.8fr) minmax(420px, 1.4fr);
   gap: 18px;
-  margin-bottom: 18px;
+  margin: 18px 0;
 }
 
 .panel {
@@ -248,13 +216,7 @@ th {
 }
 
 @media (max-width: 860px) {
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .filters-panel,
-  .metrics-row,
   .charts-grid {
     grid-template-columns: 1fr;
   }
