@@ -1,10 +1,5 @@
 package com.example.inventory.service;
 
-import com.example.inventory.dto.DailyMovementTotalDto;
-import com.example.inventory.dto.MovementAnalyticsResponse;
-import com.example.inventory.dto.MovementPageResponse;
-import com.example.inventory.dto.MovementSummaryDto;
-import com.example.inventory.dto.StockMovementDto;
 import com.example.inventory.model.MovementType;
 import com.example.inventory.model.StockMovement;
 import com.example.inventory.repository.StockMovementRepository;
@@ -16,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -32,49 +26,49 @@ public class StockMovementService {
         this.repository = repository;
     }
 
-    public MovementPageResponse findMovementPage(LocalDate from, LocalDate to, MovementType type, int page, int size) {
-        Instant fromInstant = from.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant toExclusive = to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+    public Page<StockMovement> findMovementPage(MovementFilter filter, int page, int size) {
+        Instant fromInstant = filter.fromInstant();
+        Instant toExclusive = filter.toExclusiveInstant();
         Pageable pageable = PageRequest.of(page, size, TABLE_SORT);
 
-        Page<StockMovement> pageResult = type == null
+        return filter.type() == null
                 ? repository.findByTimestampGreaterThanEqualAndTimestampLessThan(fromInstant, toExclusive, pageable)
-                : repository.findByTimestampGreaterThanEqualAndTimestampLessThanAndMovementType(fromInstant, toExclusive, type, pageable);
-
-        return new MovementPageResponse(
-                pageResult.getContent().stream().map(StockMovementDto::fromEntity).toList(),
-                pageResult.getNumber(),
-                pageResult.getSize(),
-                pageResult.getTotalElements(),
-                pageResult.getTotalPages()
+                : repository.findByTimestampGreaterThanEqualAndTimestampLessThanAndMovementType(
+                fromInstant,
+                toExclusive,
+                filter.type(),
+                pageable
         );
     }
 
-    public MovementAnalyticsResponse findMovementAnalytics(LocalDate from, LocalDate to, MovementType type) {
-        List<StockMovement> allFiltered = findAllFiltered(from, to, type);
+    public MovementAnalytics findMovementAnalytics(MovementFilter filter) {
+        List<StockMovement> allFiltered = findAllFiltered(filter);
 
-        return new MovementAnalyticsResponse(
+        return new MovementAnalytics(
                 buildSummary(allFiltered),
                 buildDailyTotals(allFiltered)
         );
     }
 
-    public List<StockMovementDto> findMovementsForExport(LocalDate from, LocalDate to, MovementType type) {
-        return findAllFiltered(from, to, type).stream()
-                .map(StockMovementDto::fromEntity)
-                .toList();
+    public List<StockMovement> findMovementsForExport(MovementFilter filter) {
+        return findAllFiltered(filter);
     }
 
-    private List<StockMovement> findAllFiltered(LocalDate from, LocalDate to, MovementType type) {
-        Instant fromInstant = from.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant toExclusive = to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+    private List<StockMovement> findAllFiltered(MovementFilter filter) {
+        Instant fromInstant = filter.fromInstant();
+        Instant toExclusive = filter.toExclusiveInstant();
 
-        return type == null
+        return filter.type() == null
                 ? repository.findByTimestampGreaterThanEqualAndTimestampLessThan(fromInstant, toExclusive, EXPORT_SORT)
-                : repository.findByTimestampGreaterThanEqualAndTimestampLessThanAndMovementType(fromInstant, toExclusive, type, EXPORT_SORT);
+                : repository.findByTimestampGreaterThanEqualAndTimestampLessThanAndMovementType(
+                fromInstant,
+                toExclusive,
+                filter.type(),
+                EXPORT_SORT
+        );
     }
 
-    private MovementSummaryDto buildSummary(List<StockMovement> movements) {
+    private MovementSummary buildSummary(List<StockMovement> movements) {
         long inQuantity = movements.stream()
                 .filter(movement -> movement.getMovementType() == MovementType.IN)
                 .mapToLong(StockMovement::getQuantity)
@@ -84,14 +78,14 @@ public class StockMovementService {
                 .mapToLong(StockMovement::getQuantity)
                 .sum();
 
-        return new MovementSummaryDto(inQuantity, outQuantity);
+        return new MovementSummary(inQuantity, outQuantity);
     }
 
-    private List<DailyMovementTotalDto> buildDailyTotals(List<StockMovement> movements) {
+    private List<DailyMovementTotal> buildDailyTotals(List<StockMovement> movements) {
         Map<LocalDate, DailyAccumulator> totalsByDate = new TreeMap<>();
 
         for (StockMovement movement : movements) {
-            LocalDate date = movement.getTimestamp().atZone(ZoneOffset.UTC).toLocalDate();
+            LocalDate date = movement.getTimestamp().atZone(java.time.ZoneOffset.UTC).toLocalDate();
             DailyAccumulator accumulator = totalsByDate.computeIfAbsent(date, ignored -> new DailyAccumulator());
             if (movement.getMovementType() == MovementType.IN) {
                 accumulator.inQuantity += movement.getQuantity();
@@ -101,7 +95,7 @@ public class StockMovementService {
         }
 
         return totalsByDate.entrySet().stream()
-                .map(entry -> new DailyMovementTotalDto(
+                .map(entry -> new DailyMovementTotal(
                         entry.getKey(),
                         entry.getValue().inQuantity,
                         entry.getValue().outQuantity

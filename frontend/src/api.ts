@@ -1,6 +1,5 @@
 import type { MovementAnalyticsResponse, MovementFilters, MovementPageResponse } from './types';
-
-const PAGE_SIZE = 10;
+import { PAGE_SIZE } from './constants';
 
 function buildMovementParams(filters: MovementFilters, page?: number) {
   const params = new URLSearchParams({
